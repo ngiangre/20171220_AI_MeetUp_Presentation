@@ -4,6 +4,9 @@
 # all pdfs
 *.pdf
 
+# ppt
+*.key 
+
 # History files
 .Rhistory
 .Rapp.history
