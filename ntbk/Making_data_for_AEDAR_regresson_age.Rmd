@@ -1,0 +1,56 @@
+---
+title: "Making data for OLS of AEDARs"
+---
+
+<!-- I recommend modifying/looking at this file in RStudio -->
+
+<!-- When this file "compiles" (using the knit button in RStudio, it reads in the _output.yaml file in the same directory as this file. Alternatively, you could put the metadata from the .yaml file in this file between the ---) -->
+
+```{r opt-chunks, echo=F}
+knitr::opts_chunk$set(cache=2,
+                      cache.rebuild = T, 
+                      message = F, warning = F,
+                      autodep=TRUE,cache.lazy = FALSE,comment = "")
+```
+
+
+```{r libraries}
+library(dplyr)
+```
+
+This notebook processes the "full" AEDAR dataset and subsets it into a smaller, more manageable dataset for regressing age of reports. Only valproate-containing AEDARs will be used as a proof of concept.
+
+1. Upload table amd filter reports for thosereporting a Valproate ADR.
+
+```{r,  table_upload}
+
+stats <- data.table::fread("zcat < ../data/aeolous_stats_a_gte_20.tsv.gz",sep="\t")
+
+valproate <- stats %>% filter(drug_concept_name=="Valproate")
+
+```
+
+2. Spread out AEDARs as columns, reports as rows and frequency as values
+
+```{r aedar_spread}
+
+joined <- valproate %>% 
+  count(id,drug_outcome_name) %>% 
+  tidyr::spread(drug_outcome_name,n) %>% 
+  left_join(valproate,by = "id") 
+
+df_master_age <- joined %>% 
+  select(id:Valproate_Wound,master_age)
+
+```
+
+3. Write matrix
+
+```{r write}
+
+readr::write_csv(df_master_age,"../data/valproate_adr_sparse_matrix_master_age.csv")
+
+system("gzip ../data/valproate_adr_sparse_matrix_master_age.csv")
+```
+
+Viola. Now we can ask if valproate-containing AEDARs are dependent on age for all patients (based on reports) that took valproate. We can use OLS in python since that may work better than in R, but I would have to test it out. 
